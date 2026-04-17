@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票單系統</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', '微軟正黑體', sans-serif; 
+            background: #121212;
+            min-height: 100vh;
+            color: #f5f5f7;
+            padding: 60px 20px; 
+            max-width: 500px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+            margin-bottom: 15px; 
+        }
+
+        h2 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            padding: 8px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .tab-btn { 
+            background-color: transparent;
+            color: #8e8e93;
+            border: none;
+            padding: 12px 25px; 
+            cursor: pointer; 
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 14px;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            flex: 1; 
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn:hover {
+            color: #d1d1d6;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-btn.active, .tab-btn:focus {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .section { 
+            display: none; 
+            background: rgba(30, 30, 30, 0.4);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            padding: 40px; 
+            border-radius: 30px; 
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .active-section { 
+            display: block; 
+            animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes floatIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            flex-direction: column;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            font-size: 18px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box; 
+            width: 100%;
+            color: #ffffff;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: 600;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: normal;
+        }
+
+        input[type="text"]:focus {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1), inset 0 2px 5px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+
+        .search-input {
+            padding: 12px 18px !important;
+            font-size: 16px !important;
+            border-radius: 12px !important;
+            margin-bottom: 20px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, rgba(72, 219, 251, 0.8), rgba(10, 189, 227, 0.8));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 18px 30px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            white-space: nowrap;
+            box-shadow: 0 8px 25px rgba(10, 189, 227, 0.2);
+        }
+
+        .primary-btn:hover {
+            background: linear-gradient(135deg, rgba(72, 219, 251, 1), rgba(10, 189, 227, 1));
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(10, 189, 227, 0.4);
+        }
+
+        .clear-all-btn {
+            background: rgba(255, 118, 117, 0.15);
+            backdrop-filter: blur(5px);
+            color: #ff7675;
+            border: 1px solid rgba(255, 118, 117, 0.2);
+            padding: 10px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .clear-all-btn:hover {
+            background: rgba(214, 48, 49, 0.8);
+            color: white;
+            border-color: rgba(214, 48, 49, 1);
+            box-shadow: 0 8px 20px rgba(214, 48, 49, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .danger-btn {
+            background: rgba(255, 118, 117, 0.15);
+            color: #ff7675;
+            border: 1px solid rgba(255, 118, 117, 0.2);
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .danger-btn:hover {
+            background: rgba(255, 118, 117, 0.9);
+            color: white;
+            border-color: rgba(255, 118, 117, 1);
+            box-shadow: 0 5px 15px rgba(255, 118, 117, 0.3);
+            transform: scale(1.05);
+        }
+
+        #resultText {
+            margin-top: 25px;
+            font-size: 18px;
+            font-weight: 800;
+            text-align: center;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            min-height: 27px;
+        }
+
+        #studentList {
+            max-height: 300px; 
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        #studentList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #studentList::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2); 
+            border-radius: 10px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .list-item:hover {
+            transform: translateX(5px) scale(1.01);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .highlight-match {
+            background: rgba(10, 189, 227, 0.15) !important;
+            border-color: rgba(10, 189, 227, 0.6) !important;
+            box-shadow: 0 0 20px rgba(10, 189, 227, 0.2);
+            transform: scale(1.02);
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 30px 15px; }
+            h1 { font-size: 30px; margin-bottom: 30px; }
+            .section { padding: 30px 20px; }
+            .admin-header { flex-direction: column; gap: 15px; align-items: flex-start; }
+            .clear-all-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <h1>投票單領取系統</h1>
+
+    <div class="tab-container" id="tabs">
+        <button class="tab-btn active" onclick="showSection('studentSection', this)">領取投票單</button>
+        <button class="tab-btn" onclick="showSection('adminSection', this)">後台管理</button>
+    </div>
+
+    <div id="studentSection" class="section active-section">
+        <div class="input-group">
+            <input type="text" id="studentId" placeholder="請輸入學號" maxlength="7">
+            <button class="primary-btn" onclick="checkStudent()">送出</button>
+        </div>
+        <div id="resultText"></div>
+    </div>
+
+    <div id="adminSection" class="section">
+        <div class="admin-header">
+            <h2>已領取名單</h2>
+            <button class="clear-all-btn" onclick="clearAllStudents()">全部清除</button>
+        </div>
+        
+        <input type="text" id="searchInput" class="search-input" placeholder="輸入學號快速搜尋" oninput="filterStudents()">
+        
+        <div id="studentList"></div>
+    </div>
+
+    <script>
+        function showSection(sectionId, btn) {
+            document.getElementById('studentSection').classList.remove('active-section');
+            document.getElementById('adminSection').classList.remove('active-section');
+            document.getElementById(sectionId).classList.add('active-section');
+
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+
+            if(sectionId === 'adminSection') {
+                document.getElementById('searchInput').value = '';
+                loadStudents();
+            }
+        }
+
+        function checkStudent() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const resultText = document.getElementById('resultText');
+            const isSevenDigits = /^\d{7}$/.test(studentId);
+            
+            if (!studentId) {
+                resultText.innerText = '請先輸入學號';
+                resultText.style.color = '#8e8e93';
+                return;
+            }
+
+            if (!isSevenDigits) {
+                resultText.innerText = '格式錯誤：學號必須剛好是 7 位數字';
+                resultText.style.color = '#ff7675';
+                return;
+            }
+
+            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
+            
+            if (receivedList.includes(studentId)) {
+                resultText.innerText = '已領過';
+                resultText.style.color = '#ff7675';
+            } else {
+                receivedList.push(studentId);
+                localStorage.setItem('vote_list', JSON.stringify(receivedList));
+                
+                resultText.innerText = '可領取投票單 (已自動登記)';
+                resultText.style.color = '#00b894'; 
+                
+                document.getElementById('studentId').value = '';
+            }
+        }
+
+        function loadStudents() {
+            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
+            receivedList.sort();
+
+            const listDiv = document.getElementById('studentList');
+            listDiv.innerHTML = '';
+            
+            if (receivedList.length === 0) {
+                listDiv.innerHTML = '<div style="color: #8e8e93; text-align: center; padding: 20px 0; font-weight: bold;">目前還沒有人領取</div>';
+                return;
+            }
+
+            receivedList.forEach(id => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <span style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">${id}</span>
+                    <button class="danger-btn" onclick="deleteStudent('${id}')">清除</button>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        function filterStudents() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const items = document.querySelectorAll('.list-item');
+            let visibleCount = 0;
+            
+            items.forEach(item => {
+                const idText = item.querySelector('span').innerText;
+                
+                if (idText.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                    
+                    if (searchTerm.length === 7 && idText === searchTerm) {
+                        item.classList.add('highlight-match');
+                    } else {
+                        item.classList.remove('highlight-match');
+                    }
+                } else {
+                    item.style.display = 'none';
+                    item.classList.remove('highlight-match');
+                }
+            });
+
+            let noResultMsg = document.getElementById('noResultMsg');
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!noResultMsg) {
+                    noResultMsg = document.createElement('div');
+                    noResultMsg.id = 'noResultMsg';
+                    noResultMsg.style.cssText = 'color: #ff7675; text-align: center; padding: 20px 0; font-weight: bold;';
+                    noResultMsg.innerText = '找不到符合的學號';
+                    document.getElementById('studentList').appendChild(noResultMsg);
+                }
+            } else {
+                if (noResultMsg) {
+                    noResultMsg.remove();
+                }
+            }
+        }
+
+        function deleteStudent(studentId) {
+            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
+            receivedList = receivedList.filter(id => id !== studentId);
+            localStorage.setItem('vote_list', JSON.stringify(receivedList));
+            
+            loadStudents(); 
+            filterStudents(); 
+        }
+
+        function clearAllStudents() {
+            if (confirm('確定清除所有已登記的學號名單 ?')) {
+                localStorage.removeItem('vote_list');
+                document.getElementById('searchInput').value = ''; 
+                loadStudents();
+                alert('已成功清除所有名單');
+            }
+        }
+    </script>
+</body>
+</html>
