@@ -304,6 +304,12 @@
         let localScannedIds = new Set(); 
 
         window.onload = async function() {
+            document.getElementById('studentId').addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    checkStudent();
+                }
+            });
+
             try {
                 const getRes = await fetch(API_URL);
                 const getData = await getRes.json();
@@ -311,7 +317,7 @@
                     getData.data.forEach(id => localScannedIds.add(id));
                 }
             } catch (e) {
-                console.log("初始化錯誤", e);
+                console.log(e);
             }
         };
 
@@ -339,7 +345,7 @@
                 });
                 return await response.json();
             } catch (error) {
-                console.error('API 錯誤:', error);
+                console.error(error);
                 return null;
             }
         }
@@ -376,7 +382,7 @@
             studentInput.focus(); 
 
             sendToGoogle({ action: 'add', studentId: studentId })
-                .catch(err => console.log("背景同步失敗:", err));
+                .catch(err => console.log(err));
         }
 
         async function loadStudentsFromDB() {
@@ -394,7 +400,7 @@
                 
                 renderStudents(currentStudentList);
             } catch (error) {
-                console.log("背景名單同步失敗", error);
+                console.log(error);
             }
         }
 
@@ -464,7 +470,7 @@
                 renderStudents(currentStudentList);
                 
                 sendToGoogle({ action: 'delete', studentId: studentId })
-                    .catch(err => console.log("背景刪除失敗:", err));
+                    .catch(err => console.log(err));
             }
         }
 
@@ -476,7 +482,7 @@
                 document.getElementById('searchInput').value = ''; 
                 
                 sendToGoogle({ action: 'clear' })
-                    .catch(err => console.log("背景清空失敗:", err));
+                    .catch(err => console.log(err));
             }
         }
     </script>
