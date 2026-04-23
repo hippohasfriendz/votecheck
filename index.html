@@ -298,9 +298,22 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz5n6grOi4YqTv5VWNVVljTns06cgoxmbhzsurgPKjVyvXe-f76XQ64czMwZtmpFMWB/exec';
-
+        const API_URL = 'https://script.google.com/macros/s/AKfycbz5n6grOi4YqTv5VWNVVljTns06cgoxmbhzsurgPKjVyvXe-f76XQ64czMwZtmpFMWB/exec'; 
+        
         let currentStudentList = [];
+        let localScannedIds = new Set(); 
+
+        window.onload = async function() {
+            try {
+                const getRes = await fetch(API_URL);
+                const getData = await getRes.json();
+                if (getData.data) {
+                    getData.data.forEach(id => localScannedIds.add(id));
+                }
+            } catch (e) {
+                console.log("初始化錯誤", e);
+            }
+        };
 
         function showSection(sectionId, btn) {
             document.getElementById('studentSection').classList.remove('active-section');
@@ -331,8 +344,9 @@
             }
         }
 
-        async function checkStudent() {
-            const studentId = document.getElementById('studentId').value.trim();
+        function checkStudent() {
+            const studentInput = document.getElementById('studentId');
+            const studentId = studentInput.value.trim();
             const resultText = document.getElementById('resultText');
             const isSevenDigits = /^\d{7}$/.test(studentId);
             
@@ -348,44 +362,39 @@
                 return;
             }
 
-            resultText.innerText = '資料同步中...';
-            resultText.style.color = '#f39c12';
-
-            try {
-                const getRes = await fetch(API_URL);
-                const getData = await getRes.json();
-                
-                if (getData.data.includes(studentId)) {
-                    resultText.innerText = '已領過';
-                    resultText.style.color = '#ff7675';
-                    return;
-                }
-
-                const res = await sendToGoogle({ action: 'add', studentId: studentId });
-                if (res && res.status === 'success') {
-                    resultText.innerText = '可領取投票單 (已自動登記)';
-                    resultText.style.color = '#00b894'; 
-                    document.getElementById('studentId').value = '';
-                } else {
-                    throw new Error('新增失敗');
-                }
-            } catch (error) {
-                resultText.innerText = '連線錯誤，請檢查網路或是確認 API 網址是否正確';
+            if (localScannedIds.has(studentId)) {
+                resultText.innerText = '已領過 (重複領取)';
                 resultText.style.color = '#ff7675';
+                return;
             }
+
+            localScannedIds.add(studentId); 
+            resultText.innerText = `✅ ${studentId} 可領取！`;
+            resultText.style.color = '#00b894'; 
+            
+            studentInput.value = '';
+            studentInput.focus(); 
+
+            sendToGoogle({ action: 'add', studentId: studentId })
+                .catch(err => console.log("背景同步失敗:", err));
         }
 
         async function loadStudentsFromDB() {
-            const listDiv = document.getElementById('studentList');
-            listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">載入名單中...</div>';
+            currentStudentList = Array.from(localScannedIds).sort();
+            renderStudents(currentStudentList);
 
             try {
                 const response = await fetch(API_URL);
                 const result = await response.json();
-                currentStudentList = result.data.sort();
+                
+                const remoteList = result.data.sort();
+                localScannedIds.clear();
+                remoteList.forEach(id => localScannedIds.add(id));
+                currentStudentList = remoteList;
+                
                 renderStudents(currentStudentList);
             } catch (error) {
-                listDiv.innerHTML = '<div style="color: #ff7675; text-align: center; padding: 20px 0; font-weight: bold;">載入失敗，請檢查 API 網址或網路狀態</div>';
+                console.log("背景名單同步失敗", error);
             }
         }
 
@@ -448,25 +457,26 @@
             }
         }
 
-        async function deleteStudent(studentId) {
+        function deleteStudent(studentId) {
             if (confirm(`確定要刪除學號 ${studentId} 嗎？`)) {
-                const listDiv = document.getElementById('studentList');
-                listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">刪除中...</div>';
+                localScannedIds.delete(studentId); 
+                currentStudentList = Array.from(localScannedIds).sort();
+                renderStudents(currentStudentList);
                 
-                await sendToGoogle({ action: 'delete', studentId: studentId });
-                loadStudentsFromDB(); 
+                sendToGoogle({ action: 'delete', studentId: studentId })
+                    .catch(err => console.log("背景刪除失敗:", err));
             }
         }
 
-        async function clearAllStudents() {
+        function clearAllStudents() {
             if (confirm('確定清除所有已登記的學號名單 ? (試算表內的資料也會同步清空)')) {
-                const listDiv = document.getElementById('studentList');
-                listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">清除中...</div>';
-                
-                await sendToGoogle({ action: 'clear' });
+                localScannedIds.clear(); 
+                currentStudentList = [];
+                renderStudents(currentStudentList);
                 document.getElementById('searchInput').value = ''; 
-                loadStudentsFromDB(); 
-                alert('已成功清除所有名單');
+                
+                sendToGoogle({ action: 'clear' })
+                    .catch(err => console.log("背景清空失敗:", err));
             }
         }
     </script>
