@@ -280,7 +280,7 @@
 
     <div id="studentSection" class="section active-section">
         <div class="input-group">
-            <input type="text" id="studentId" placeholder="請輸入學號" maxlength="7">
+            <input type="text" id="studentId" placeholder="請輸入學號" maxlength="7" inputmode="numeric" pattern="\d*" enterkeyhint="send">
             <button class="primary-btn" onclick="checkStudent()">送出</button>
         </div>
         <div id="resultText"></div>
