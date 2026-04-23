@@ -298,6 +298,10 @@
     </div>
 
     <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbz5n6grOi4YqTv5VWNVVljTns06cgoxmbhzsurgPKjVyvXe-f76XQ64czMwZtmpFMWB/exec';
+
+        let currentStudentList = [];
+
         function showSection(sectionId, btn) {
             document.getElementById('studentSection').classList.remove('active-section');
             document.getElementById('adminSection').classList.remove('active-section');
@@ -309,11 +313,25 @@
 
             if(sectionId === 'adminSection') {
                 document.getElementById('searchInput').value = '';
-                loadStudents();
+                loadStudentsFromDB(); 
             }
         }
 
-        function checkStudent() {
+        async function sendToGoogle(data) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('API 錯誤:', error);
+                return null;
+            }
+        }
+
+        async function checkStudent() {
             const studentId = document.getElementById('studentId').value.trim();
             const resultText = document.getElementById('resultText');
             const isSevenDigits = /^\d{7}$/.test(studentId);
@@ -330,35 +348,57 @@
                 return;
             }
 
-            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
-            
-            if (receivedList.includes(studentId)) {
-                resultText.innerText = '已領過';
+            resultText.innerText = '資料同步中...';
+            resultText.style.color = '#f39c12';
+
+            try {
+                const getRes = await fetch(API_URL);
+                const getData = await getRes.json();
+                
+                if (getData.data.includes(studentId)) {
+                    resultText.innerText = '已領過';
+                    resultText.style.color = '#ff7675';
+                    return;
+                }
+
+                const res = await sendToGoogle({ action: 'add', studentId: studentId });
+                if (res && res.status === 'success') {
+                    resultText.innerText = '可領取投票單 (已自動登記)';
+                    resultText.style.color = '#00b894'; 
+                    document.getElementById('studentId').value = '';
+                } else {
+                    throw new Error('新增失敗');
+                }
+            } catch (error) {
+                resultText.innerText = '連線錯誤，請檢查網路或是確認 API 網址是否正確';
                 resultText.style.color = '#ff7675';
-            } else {
-                receivedList.push(studentId);
-                localStorage.setItem('vote_list', JSON.stringify(receivedList));
-                
-                resultText.innerText = '可領取投票單 (已自動登記)';
-                resultText.style.color = '#00b894'; 
-                
-                document.getElementById('studentId').value = '';
             }
         }
 
-        function loadStudents() {
-            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
-            receivedList.sort();
+        async function loadStudentsFromDB() {
+            const listDiv = document.getElementById('studentList');
+            listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">載入名單中...</div>';
 
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                currentStudentList = result.data.sort();
+                renderStudents(currentStudentList);
+            } catch (error) {
+                listDiv.innerHTML = '<div style="color: #ff7675; text-align: center; padding: 20px 0; font-weight: bold;">載入失敗，請檢查 API 網址或網路狀態</div>';
+            }
+        }
+
+        function renderStudents(list) {
             const listDiv = document.getElementById('studentList');
             listDiv.innerHTML = '';
             
-            if (receivedList.length === 0) {
+            if (list.length === 0) {
                 listDiv.innerHTML = '<div style="color: #8e8e93; text-align: center; padding: 20px 0; font-weight: bold;">目前還沒有人領取</div>';
                 return;
             }
 
-            receivedList.forEach(id => {
+            list.forEach(id => {
                 const item = document.createElement('div');
                 item.className = 'list-item';
                 item.innerHTML = `
@@ -367,6 +407,10 @@
                 `;
                 listDiv.appendChild(item);
             });
+
+            if(document.getElementById('searchInput').value) {
+                filterStudents();
+            }
         }
 
         function filterStudents() {
@@ -376,11 +420,9 @@
             
             items.forEach(item => {
                 const idText = item.querySelector('span').innerText;
-                
                 if (idText.includes(searchTerm)) {
                     item.style.display = 'flex';
                     visibleCount++;
-                    
                     if (searchTerm.length === 7 && idText === searchTerm) {
                         item.classList.add('highlight-match');
                     } else {
@@ -402,26 +444,28 @@
                     document.getElementById('studentList').appendChild(noResultMsg);
                 }
             } else {
-                if (noResultMsg) {
-                    noResultMsg.remove();
-                }
+                if (noResultMsg) noResultMsg.remove();
             }
         }
 
-        function deleteStudent(studentId) {
-            let receivedList = JSON.parse(localStorage.getItem('vote_list')) || [];
-            receivedList = receivedList.filter(id => id !== studentId);
-            localStorage.setItem('vote_list', JSON.stringify(receivedList));
-            
-            loadStudents(); 
-            filterStudents(); 
+        async function deleteStudent(studentId) {
+            if (confirm(`確定要刪除學號 ${studentId} 嗎？`)) {
+                const listDiv = document.getElementById('studentList');
+                listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">刪除中...</div>';
+                
+                await sendToGoogle({ action: 'delete', studentId: studentId });
+                loadStudentsFromDB(); 
+            }
         }
 
-        function clearAllStudents() {
-            if (confirm('確定清除所有已登記的學號名單 ?')) {
-                localStorage.removeItem('vote_list');
+        async function clearAllStudents() {
+            if (confirm('確定清除所有已登記的學號名單 ? (試算表內的資料也會同步清空)')) {
+                const listDiv = document.getElementById('studentList');
+                listDiv.innerHTML = '<div style="color: #f39c12; text-align: center; padding: 20px 0; font-weight: bold;">清除中...</div>';
+                
+                await sendToGoogle({ action: 'clear' });
                 document.getElementById('searchInput').value = ''; 
-                loadStudents();
+                loadStudentsFromDB(); 
                 alert('已成功清除所有名單');
             }
         }
